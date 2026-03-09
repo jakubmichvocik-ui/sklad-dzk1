@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/require-permission";
+import PrintButton from "../../../../components/print-button";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -80,12 +81,8 @@ export default async function InventoryPrintPage({ params }: Props) {
       `}</style>
 
       <div className="no-print mb-6 flex gap-3">
-        <button
-          onClick={() => window.print()}
-          className="rounded-xl bg-slate-900 px-4 py-2 text-white"
-        >
-          Tlačiť
-        </button>
+        <PrintButton />
+
         <a
           href={`/inventory/${id}`}
           className="rounded-xl border border-gray-300 px-4 py-2"
@@ -96,6 +93,7 @@ export default async function InventoryPrintPage({ params }: Props) {
 
       <div className="mb-6 border-b border-black pb-4">
         <h1 className="text-2xl font-bold">Inventúrny hárok</h1>
+
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div>
             <strong>Sklad:</strong> {warehouse?.name || "-"}
