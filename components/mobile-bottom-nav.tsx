@@ -21,6 +21,7 @@ const mainLinks = [
 
 const moreLinks = [
   { href: "/stock", label: "Stav skladu", icon: "📦", permission: "stock" },
+  { href: "/reports/sales", label: "Predaje", icon: "📊", permission: "orders" },
   { href: "/transfers", label: "Presun", icon: "🔄", permission: "transfers" },
   { href: "/inventory", label: "Inventúra", icon: "📋", permission: "inventory" },
   { href: "/products", label: "Produkty", icon: "🧾", permission: "products" },

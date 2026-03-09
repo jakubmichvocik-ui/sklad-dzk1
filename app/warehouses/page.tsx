@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import PageHeader from "../../components/page-header";
-import SectionCard from "../../components/section-card";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
+import TableScroll from "@/components/table-scroll";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type WarehousesPageProps = {
@@ -25,7 +26,7 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader title="Sklady" description="Správa skladov" />
 
       {errorMessage ? (
@@ -61,8 +62,8 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
         </form>
       </SectionCard>
 
-      <div className="overflow-hidden rounded-2xl border bg-white">
-        <table className="w-full border-collapse">
+      <TableScroll>
+        <table className="min-w-[700px] w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 text-left">
               <th className="px-4 py-3 text-sm">Názov</th>
@@ -127,7 +128,7 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

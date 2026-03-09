@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import PageHeader from "../../components/page-header";
-import SectionCard from "../../components/section-card";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
+import TableScroll from "@/components/table-scroll";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type ProductsPageProps = {
@@ -33,7 +34,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const { data: products, error } = await query;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Produkty"
         description="Katalóg produktov, cien a minimálnych zásob"
@@ -78,7 +79,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
       <SectionCard title="Pridať produkt">
         <form action="/products/new" method="post" className="grid gap-4 md:grid-cols-2">
-          <input name="sku" placeholder="SKU" className="rounded-xl border px-3 py-2.5" />
+          <input
+            name="sku"
+            placeholder="SKU"
+            className="rounded-xl border px-3 py-2.5"
+          />
 
           <input
             name="name"
@@ -134,8 +139,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </form>
       </SectionCard>
 
-      <div className="overflow-hidden rounded-2xl border bg-white">
-        <table className="w-full border-collapse">
+      <TableScroll>
+        <table className="min-w-[1100px] w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 text-left">
               <th className="px-4 py-3 text-sm">SKU</th>
@@ -212,7 +217,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

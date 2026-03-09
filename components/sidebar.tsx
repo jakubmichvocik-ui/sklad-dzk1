@@ -15,6 +15,7 @@ type ProfileData = {
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠", permission: "dashboard" },
   { href: "/stock", label: "Stav skladu", icon: "📦", permission: "stock" },
+  { href: "/reports/sales", label: "Predaje", icon: "📊", permission: "orders" },
   { href: "/movements", label: "Príjem", icon: "⬇️", permission: "movements" },
   { href: "/issues", label: "Výdaj", icon: "⬆️", permission: "issues" },
   { href: "/transfers", label: "Presun", icon: "🔄", permission: "transfers" },

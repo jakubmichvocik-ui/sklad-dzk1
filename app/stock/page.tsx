@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import PageHeader from "../../components/page-header";
-import SectionCard from "../../components/section-card";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type StockPageProps = {
@@ -91,7 +91,9 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   }
 
   if (low) {
-    rows = rows.filter((row) => Number(row.quantity) <= Number(row.products?.min_stock ?? 0));
+    rows = rows.filter(
+      (row) => Number(row.quantity) <= Number(row.products?.min_stock ?? 0)
+    );
   }
 
   const totalPurchaseValue = rows.reduce((sum, row) => {
@@ -107,7 +109,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const totalItems = rows.reduce((sum, row) => sum + Number(row.quantity), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Stav skladu"
         description="Aktuálny prehľad zásob podľa skladov a lokácií"
@@ -190,82 +192,90 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         </SectionCard>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-50 text-left">
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">SKU</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Produkt</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Sklad</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Lokácia</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Množstvo</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Min. zásoba</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Jednotka</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Nákupná hodnota</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Predajná hodnota</th>
-              <th className="px-4 py-3 text-sm font-medium text-gray-500">Aktualizované</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {error ? (
-              <tr>
-                <td colSpan={10} className="px-4 py-4 text-sm text-red-600">
-                  Chyba pri načítaní stavu skladu
-                </td>
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-[1200px] w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-left">
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">SKU</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Produkt</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Sklad</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Lokácia</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Množstvo</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Min. zásoba</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Jednotka</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Nákupná hodnota</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Predajná hodnota</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Aktualizované</th>
               </tr>
-            ) : rows.length > 0 ? (
-              rows.map((row) => {
-                const purchasePrice = Number(row.products?.purchase_price ?? 0);
-                const salePrice = Number(row.products?.sale_price ?? 0);
-                const purchaseValue = Number(row.quantity) * purchasePrice;
-                const saleValue = Number(row.quantity) * salePrice;
-                const isLow = Number(row.quantity) <= Number(row.products?.min_stock ?? 0);
+            </thead>
 
-                return (
-                  <tr key={row.id} className={`border-t border-gray-100 ${isLow ? "bg-red-50" : ""}`}>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {row.products?.sku || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {row.products?.name || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {row.warehouses?.name || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {row.locations ? `${row.locations.code} - ${row.locations.name}` : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {Number(row.quantity).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {Number(row.products?.min_stock ?? 0).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {row.products?.unit || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {purchaseValue.toFixed(2)} €
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {saleValue.toFixed(2)} €
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {new Date(row.updated_at).toLocaleString("sk-SK")}
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={10} className="px-4 py-4 text-sm text-gray-500">
-                  Nenašli sa žiadne zásoby.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            <tbody>
+              {error ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-4 text-sm text-red-600">
+                    Chyba pri načítaní stavu skladu
+                  </td>
+                </tr>
+              ) : rows.length > 0 ? (
+                rows.map((row) => {
+                  const purchasePrice = Number(row.products?.purchase_price ?? 0);
+                  const salePrice = Number(row.products?.sale_price ?? 0);
+                  const purchaseValue = Number(row.quantity) * purchasePrice;
+                  const saleValue = Number(row.quantity) * salePrice;
+                  const isLow =
+                    Number(row.quantity) <= Number(row.products?.min_stock ?? 0);
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`border-t border-gray-100 ${isLow ? "bg-red-50" : ""}`}
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {row.products?.sku || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {row.products?.name || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {row.warehouses?.name || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {row.locations
+                          ? `${row.locations.code} - ${row.locations.name}`
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {Number(row.quantity).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {Number(row.products?.min_stock ?? 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {row.products?.unit || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {purchaseValue.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {saleValue.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {new Date(row.updated_at).toLocaleString("sk-SK")}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={10} className="px-4 py-4 text-sm text-gray-500">
+                    Nenašli sa žiadne zásoby.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

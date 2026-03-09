@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import PageHeader from "../../components/page-header";
-import SectionCard from "../../components/section-card";
-import IssueForm from "../../components/issue-form";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
+import IssueForm from "@/components/issue-form";
+import TableScroll from "@/components/table-scroll";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type IssuesPageProps = {
@@ -97,7 +98,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
   const issues = (issuesRaw ?? []) as IssueMovement[];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader title="Výdaj" description="Odpísanie tovaru zo skladu" />
 
       {errorMessage ? (
@@ -123,8 +124,8 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
         />
       </SectionCard>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <table className="w-full border-collapse">
+      <TableScroll>
+        <table className="min-w-[900px] w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 text-left">
               <th className="px-4 py-3 text-sm font-medium text-gray-500">Typ</th>
@@ -176,7 +177,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

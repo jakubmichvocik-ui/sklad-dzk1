@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import PageHeader from "../../components/page-header";
-import SectionCard from "../../components/section-card";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
+import TableScroll from "@/components/table-scroll";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type LocationsPageProps = {
@@ -41,7 +42,7 @@ export default async function LocationsPage({ searchParams }: LocationsPageProps
     .order("name", { ascending: true });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Lokácie"
         description="Správa regálov, zón a lokácií v skladoch"
@@ -100,8 +101,8 @@ export default async function LocationsPage({ searchParams }: LocationsPageProps
         </form>
       </SectionCard>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <table className="w-full border-collapse">
+      <TableScroll>
+        <table className="min-w-[950px] w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 text-left">
               <th className="px-4 py-3 text-sm font-medium text-gray-500">Sklad</th>
@@ -180,7 +181,7 @@ export default async function LocationsPage({ searchParams }: LocationsPageProps
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }
