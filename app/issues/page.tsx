@@ -16,6 +16,7 @@ type Product = {
   id: string;
   name: string;
   sku: string | null;
+  barcode: string | null;
 };
 
 type Warehouse = {
@@ -59,7 +60,7 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
 
   const { data: products } = await supabase
     .from("products")
-    .select("id, name, sku")
+    .select("id, name, sku, barcode")
     .eq("is_active", true)
     .order("name", { ascending: true });
 

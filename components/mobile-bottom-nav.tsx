@@ -21,13 +21,15 @@ const mainLinks = [
 
 const moreLinks = [
   { href: "/stock", label: "Stav skladu", icon: "📦", permission: "stock" },
-  { href: "/reports/sales", label: "Predaje", icon: "📊", permission: "orders" },
   { href: "/transfers", label: "Presun", icon: "🔄", permission: "transfers" },
   { href: "/inventory", label: "Inventúra", icon: "📋", permission: "inventory" },
+  { href: "/orders", label: "Objednávky", icon: "🛒", permission: "orders" },
   { href: "/products", label: "Produkty", icon: "🧾", permission: "products" },
+  { href: "/suppliers", label: "Dodávatelia", icon: "🚚", permission: "suppliers" },
   { href: "/warehouses", label: "Sklady", icon: "🏬", permission: "warehouses" },
   { href: "/locations", label: "Lokácie", icon: "📍", permission: "locations" },
   { href: "/users", label: "Používatelia", icon: "👤", permission: "users" },
+  { href: "/reports/sales", label: "Predaje", icon: "📊", permission: "orders" },
 ];
 
 export default function MobileBottomNav() {

@@ -1,5 +1,5 @@
-import PageHeader from "../../../components/page-header";
-import SectionCard from "../../../components/section-card";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 
@@ -16,6 +16,7 @@ type Permissions = {
   inventory?: boolean;
   orders?: boolean;
   products?: boolean;
+  suppliers?: boolean;
   warehouses?: boolean;
   locations?: boolean;
   users?: boolean;
@@ -47,7 +48,7 @@ export default async function UserEditPage({ params }: Props) {
   const permissions = (user.permissions ?? {}) as Permissions;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Upraviť používateľa"
         description="Zmena mena, role, stavu a práv"
@@ -161,6 +162,15 @@ export default async function UserEditPage({ params }: Props) {
                   defaultChecked={!!permissions.products}
                 />
                 Produkty
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="perm_suppliers"
+                  defaultChecked={!!permissions.suppliers}
+                />
+                Dodávatelia
               </label>
 
               <label className="flex items-center gap-2">

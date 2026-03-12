@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import PageHeader from "../../../components/page-header";
-import SectionCard from "../../../components/section-card";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    error?: string;
+  }>;
 };
 
 type MovementRow = {
@@ -13,10 +16,6 @@ type MovementRow = {
   quantity: number;
   note: string | null;
   created_at: string;
-  from_warehouse_id: string | null;
-  from_location_id: string | null;
-  to_warehouse_id: string | null;
-  to_location_id: string | null;
 };
 
 type StockBalanceRow = {
@@ -27,10 +26,13 @@ type StockBalanceRow = {
   locations: { name: string; code: string } | { name: string; code: string }[] | null;
 };
 
-export default async function ProductEditPage({ params }: Props) {
+export default async function ProductEditPage({ params, searchParams }: Props) {
   await requirePermission("products");
 
   const { id } = await params;
+  const query = await searchParams;
+  const errorMessage = query.error || "";
+
   const supabase = await createClient();
 
   const { data: product } = await supabase
@@ -58,11 +60,7 @@ export default async function ProductEditPage({ params }: Props) {
       movement_type,
       quantity,
       note,
-      created_at,
-      from_warehouse_id,
-      from_location_id,
-      to_warehouse_id,
-      to_location_id
+      created_at
     `)
     .eq("product_id", id)
     .order("created_at", { ascending: false })
@@ -95,11 +93,17 @@ export default async function ProductEditPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Upraviť produkt"
         description="Úprava údajov produktu a história pohybov"
       />
+
+      {errorMessage ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <SectionCard>
         <form action={`/products/${id}/update`} method="post" className="grid gap-4 md:grid-cols-2">
@@ -107,6 +111,13 @@ export default async function ProductEditPage({ params }: Props) {
             name="sku"
             defaultValue={product.sku || ""}
             placeholder="SKU"
+            className="rounded-xl border border-gray-200 px-3 py-2.5"
+          />
+
+          <input
+            name="barcode"
+            defaultValue={product.barcode || ""}
+            placeholder="Čiarový kód"
             className="rounded-xl border border-gray-200 px-3 py-2.5"
           />
 
@@ -130,7 +141,7 @@ export default async function ProductEditPage({ params }: Props) {
             name="min_stock"
             type="number"
             step="0.01"
-            defaultValue={product.min_stock}
+            defaultValue={product.min_stock ?? 0}
             placeholder="Minimálna zásoba"
             className="rounded-xl border border-gray-200 px-3 py-2.5"
           />
@@ -139,7 +150,7 @@ export default async function ProductEditPage({ params }: Props) {
             name="purchase_price"
             type="number"
             step="0.01"
-            defaultValue={product.purchase_price}
+            defaultValue={product.purchase_price ?? 0}
             placeholder="Nákupná cena"
             className="rounded-xl border border-gray-200 px-3 py-2.5"
           />
@@ -148,9 +159,9 @@ export default async function ProductEditPage({ params }: Props) {
             name="sale_price"
             type="number"
             step="0.01"
-            defaultValue={product.sale_price}
+            defaultValue={product.sale_price ?? 0}
             placeholder="Predajná cena"
-            className="rounded-xl border border-gray-200 px-3 py-2.5"
+            className="rounded-xl border border-gray-200 px-3 py-2.5 md:col-span-2"
           />
 
           <textarea
@@ -179,44 +190,46 @@ export default async function ProductEditPage({ params }: Props) {
         title="Aktuálny stav produktu"
         description="Zásoby produktu podľa skladov a lokácií"
       >
-        <div className="overflow-hidden rounded-2xl border border-gray-100">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Sklad</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Lokácia</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Množstvo</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Aktualizované</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stockBalances.length > 0 ? (
-                stockBalances.map((row) => {
-                  const warehouse = Array.isArray(row.warehouses) ? row.warehouses[0] : row.warehouses;
-                  const location = Array.isArray(row.locations) ? row.locations[0] : row.locations;
-
-                  return (
-                    <tr key={row.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3 text-sm text-gray-700">{warehouse?.name || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {location ? `${location.code} - ${location.name}` : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{Number(row.quantity).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(row.updated_at).toLocaleString("sk-SK")}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-4 py-4 text-sm text-gray-500">
-                    Produkt zatiaľ nemá žiadne zásoby.
-                  </td>
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[900px] w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-left">
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Sklad</th>
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Lokácia</th>
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Množstvo</th>
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Aktualizované</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {stockBalances.length > 0 ? (
+                  stockBalances.map((row) => {
+                    const warehouse = Array.isArray(row.warehouses) ? row.warehouses[0] : row.warehouses;
+                    const location = Array.isArray(row.locations) ? row.locations[0] : row.locations;
+
+                    return (
+                      <tr key={row.id} className="border-t border-gray-100">
+                        <td className="px-4 py-3 text-sm text-gray-700">{warehouse?.name || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {location ? `${location.code} - ${location.name}` : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{Number(row.quantity).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {new Date(row.updated_at).toLocaleString("sk-SK")}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-4 text-sm text-gray-500">
+                      Produkt zatiaľ nemá žiadne zásoby.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </SectionCard>
 
@@ -224,43 +237,45 @@ export default async function ProductEditPage({ params }: Props) {
         title="História pohybov"
         description="Príjmy, výdaje, presuny a inventúrne rozdiely"
       >
-        <div className="overflow-hidden rounded-2xl border border-gray-100">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Typ</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Množstvo</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Poznámka</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-500">Dátum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movements.length > 0 ? (
-                movements.map((movement) => (
-                  <tr key={movement.id} className="border-t border-gray-100">
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {movementLabel(movement.movement_type)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {Number(movement.quantity).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {movement.note || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {new Date(movement.created_at).toLocaleString("sk-SK")}
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[900px] w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-left">
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Typ</th>
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Množstvo</th>
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Poznámka</th>
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">Dátum</th>
+                </tr>
+              </thead>
+              <tbody>
+                {movements.length > 0 ? (
+                  movements.map((movement) => (
+                    <tr key={movement.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {movementLabel(movement.movement_type)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {Number(movement.quantity).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {movement.note || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {new Date(movement.created_at).toLocaleString("sk-SK")}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-4 text-sm text-gray-500">
+                      Produkt zatiaľ nemá žiadnu históriu pohybov.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-4 py-4 text-sm text-gray-500">
-                    Produkt zatiaľ nemá žiadnu históriu pohybov.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </SectionCard>
     </div>

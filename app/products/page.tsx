@@ -12,6 +12,18 @@ type ProductsPageProps = {
   }>;
 };
 
+type ProductRow = {
+  id: string;
+  sku: string | null;
+  barcode: string | null;
+  name: string;
+  unit: string;
+  min_stock: number | null;
+  purchase_price: number | null;
+  sale_price: number | null;
+  is_active: boolean;
+};
+
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   await requirePermission("products");
 
@@ -24,20 +36,23 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   let query = supabase
     .from("products")
-    .select("*")
+    .select(
+      "id, sku, barcode, name, unit, min_stock, purchase_price, sale_price, is_active"
+    )
     .order("created_at", { ascending: false });
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`);
+    query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%,barcode.ilike.%${q}%`);
   }
 
-  const { data: products, error } = await query;
+  const { data: productsRaw, error } = await query;
+  const products = (productsRaw ?? []) as ProductRow[];
 
   return (
     <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Produkty"
-        description="Katalóg produktov, cien a minimálnych zásob"
+        description="Katalóg produktov, cien, minimálnych zásob a čiarových kódov"
       />
 
       {errorMessage ? (
@@ -54,13 +69,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
       <SectionCard
         title="Filtrovanie"
-        description="Vyhľadávanie podľa názvu produktu alebo SKU"
+        description="Vyhľadávanie podľa názvu, SKU alebo čiarového kódu"
       >
         <form method="get" className="grid gap-4 md:grid-cols-3">
           <input
             name="q"
             defaultValue={q}
-            placeholder="Hľadaj názov alebo SKU"
+            placeholder="Hľadaj názov, SKU alebo čiarový kód"
             className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none"
           />
 
@@ -82,6 +97,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           <input
             name="sku"
             placeholder="SKU"
+            className="rounded-xl border px-3 py-2.5"
+          />
+
+          <input
+            name="barcode"
+            placeholder="Čiarový kód"
             className="rounded-xl border px-3 py-2.5"
           />
 
@@ -124,7 +145,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             step="0.01"
             min="0"
             defaultValue="0"
-            className="rounded-xl border px-3 py-2.5"
+            className="rounded-xl border px-3 py-2.5 md:col-span-2"
           />
 
           <textarea
@@ -140,10 +161,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       </SectionCard>
 
       <TableScroll>
-        <table className="min-w-[1100px] w-full border-collapse">
+        <table className="min-w-[1250px] w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 text-left">
               <th className="px-4 py-3 text-sm">SKU</th>
+              <th className="px-4 py-3 text-sm">Čiarový kód</th>
               <th className="px-4 py-3 text-sm">Názov</th>
               <th className="px-4 py-3 text-sm">Jednotka</th>
               <th className="px-4 py-3 text-sm">Min. zásoba</th>
@@ -157,17 +179,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           <tbody>
             {error ? (
               <tr>
-                <td colSpan={8} className="px-4 py-4 text-red-600">
+                <td colSpan={9} className="px-4 py-4 text-red-600">
                   Chyba pri načítaní produktov
                 </td>
               </tr>
-            ) : products?.length ? (
+            ) : products.length > 0 ? (
               products.map((product) => (
                 <tr key={product.id} className="border-t">
                   <td className="px-4 py-3">{product.sku || "-"}</td>
+                  <td className="px-4 py-3">{product.barcode || "-"}</td>
                   <td className="px-4 py-3">{product.name}</td>
                   <td className="px-4 py-3">{product.unit}</td>
-                  <td className="px-4 py-3">{product.min_stock}</td>
+                  <td className="px-4 py-3">
+                    {Number(product.min_stock ?? 0).toFixed(2)}
+                  </td>
                   <td className="px-4 py-3">
                     {Number(product.purchase_price ?? 0).toFixed(2)} €
                   </td>
@@ -210,7 +235,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="px-4 py-4">
+                <td colSpan={9} className="px-4 py-4">
                   Žiadne produkty
                 </td>
               </tr>

@@ -22,6 +22,7 @@ export async function POST(request: Request, { params }: Props) {
     inventory: formData.get("perm_inventory") === "on",
     orders: formData.get("perm_orders") === "on",
     products: formData.get("perm_products") === "on",
+    suppliers: formData.get("perm_suppliers") === "on",
     warehouses: formData.get("perm_warehouses") === "on",
     locations: formData.get("perm_locations") === "on",
     users: formData.get("perm_users") === "on",

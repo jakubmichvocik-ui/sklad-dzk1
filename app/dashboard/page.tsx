@@ -11,10 +11,12 @@ type MovementRow = {
     | {
         name: string;
         sku: string | null;
+        is_active: boolean | null;
       }
     | {
         name: string;
         sku: string | null;
+        is_active: boolean | null;
       }[]
     | null;
 };
@@ -28,6 +30,7 @@ type StockRow = {
     min_stock: number | null;
     purchase_price: number | null;
     sale_price: number | null;
+    is_active: boolean | null;
   } | null;
 };
 
@@ -73,7 +76,8 @@ export default async function DashboardPage() {
         sku,
         min_stock,
         purchase_price,
-        sale_price
+        sale_price,
+        is_active
       )
     `),
 
@@ -86,15 +90,25 @@ export default async function DashboardPage() {
         created_at,
         products (
           name,
-          sku
+          sku,
+          is_active
         )
       `)
       .order("created_at", { ascending: false })
       .limit(8),
   ]);
 
-  const stockRows = (stockRowsRaw ?? []) as unknown as StockRow[];
-  const recentMovements = (recentMovementsRaw ?? []) as unknown as MovementRow[];
+  const stockRowsAll = (stockRowsRaw ?? []) as unknown as StockRow[];
+  const stockRows = stockRowsAll.filter((row) => row.products?.is_active !== false);
+
+  const recentMovementsAll = (recentMovementsRaw ?? []) as unknown as MovementRow[];
+  const recentMovements = recentMovementsAll.filter((movement) => {
+    const product = Array.isArray(movement.products)
+      ? movement.products[0]
+      : movement.products;
+
+    return product?.is_active !== false;
+  });
 
   const totalItems = stockRows.reduce((sum, row) => sum + Number(row.quantity ?? 0), 0);
 
@@ -111,42 +125,12 @@ export default async function DashboardPage() {
   }).length;
 
   const quickActions: QuickAction[] = [
-    {
-      href: "/movements",
-      title: "Príjem",
-      description: "Naskladni tovar",
-      icon: "⬇️",
-    },
-    {
-      href: "/issues",
-      title: "Výdaj",
-      description: "Odpíš tovar",
-      icon: "⬆️",
-    },
-    {
-      href: "/transfers",
-      title: "Presun",
-      description: "Presuň zásoby",
-      icon: "🔄",
-    },
-    {
-      href: "/inventory",
-      title: "Inventúra",
-      description: "Spusti kontrolu",
-      icon: "📋",
-    },
-    {
-      href: "/orders",
-      title: "Objednávky",
-      description: "Picker a e-shop",
-      icon: "🛒",
-    },
-    {
-      href: "/stock",
-      title: "Stav skladu",
-      description: "Prehľad zásob",
-      icon: "📦",
-    },
+    { href: "/movements", title: "Príjem", description: "Naskladni tovar", icon: "⬇️" },
+    { href: "/issues", title: "Výdaj", description: "Odpíš tovar", icon: "⬆️" },
+    { href: "/transfers", title: "Presun", description: "Presuň zásoby", icon: "🔄" },
+    { href: "/inventory", title: "Inventúra", description: "Spusti kontrolu", icon: "📋" },
+    { href: "/orders", title: "Objednávky", description: "Picker a e-shop", icon: "🛒" },
+    { href: "/stock", title: "Stav skladu", description: "Prehľad zásob", icon: "📦" },
   ];
 
   function movementLabel(type: string) {

@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import BarcodeInput from "@/components/barcode-input";
+import CameraBarcodeScanner from "@/components/camera-barcode-scanner";
 
 type Product = {
   id: string;
   name: string;
   sku: string | null;
+  barcode: string | null;
 };
 
 type Warehouse = {
@@ -96,8 +99,29 @@ export default function TransferForm({
     loadToBalance();
   }, [productId, toWarehouseId, toLocationId]);
 
+  function handleDetectedCode(code: string) {
+    const clean = code.trim();
+
+    const found = products.find(
+      (product) =>
+        product.barcode?.trim() === clean ||
+        product.sku?.trim() === clean
+    );
+
+    if (found) {
+      setProductId(found.id);
+    }
+  }
+
   return (
     <form action="/transfers/new" method="post" className="space-y-4">
+      <BarcodeInput
+        products={products}
+        onProductFound={(id) => setProductId(id)}
+      />
+
+      <CameraBarcodeScanner onDetected={handleDetectedCode} />
+
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 text-sm font-semibold text-gray-900">1. Produkt a množstvo</div>
 

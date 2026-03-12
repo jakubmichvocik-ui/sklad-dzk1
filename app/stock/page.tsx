@@ -18,10 +18,12 @@ type StockRow = {
   products: {
     name: string;
     sku: string | null;
+    barcode: string | null;
     unit: string;
     min_stock: number | null;
     purchase_price: number | null;
     sale_price: number | null;
+    is_active: boolean | null;
   } | null;
   warehouses: {
     id?: string;
@@ -58,10 +60,12 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       products (
         name,
         sku,
+        barcode,
         unit,
         min_stock,
         purchase_price,
-        sale_price
+        sale_price,
+        is_active
       ),
       warehouses (
         id,
@@ -79,14 +83,24 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   }
 
   const { data, error } = await query;
-  let rows = (data ?? []) as unknown as StockRow[];
+
+  const allRows = (data ?? []) as unknown as StockRow[];
+
+  let rows = allRows.filter((row) => {
+    return row.products && row.products.is_active !== false;
+  });
 
   if (q) {
     const qLower = q.toLowerCase();
     rows = rows.filter((row) => {
       const name = row.products?.name?.toLowerCase() || "";
       const sku = row.products?.sku?.toLowerCase() || "";
-      return name.includes(qLower) || sku.includes(qLower);
+      const barcode = row.products?.barcode?.toLowerCase() || "";
+      return (
+        name.includes(qLower) ||
+        sku.includes(qLower) ||
+        barcode.includes(qLower)
+      );
     });
   }
 
@@ -126,13 +140,13 @@ export default async function StockPage({ searchParams }: StockPageProps) {
 
       <SectionCard
         title="Filtre"
-        description="Vyhľadávanie podľa produktu a filtrovanie podľa skladu"
+        description="Vyhľadávanie podľa produktu, SKU, čiarového kódu a skladu"
       >
         <form method="get" className="grid gap-4 md:grid-cols-4">
           <input
             name="q"
             defaultValue={q}
-            placeholder="Hľadaj názov alebo SKU"
+            placeholder="Hľadaj názov, SKU alebo čiarový kód"
             className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none transition focus:border-gray-400"
           />
 
@@ -194,10 +208,11 @@ export default async function StockPage({ searchParams }: StockPageProps) {
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="min-w-[1200px] w-full border-collapse">
+          <table className="min-w-[1350px] w-full border-collapse">
             <thead>
               <tr className="bg-gray-50 text-left">
                 <th className="px-4 py-3 text-sm font-medium text-gray-500">SKU</th>
+                <th className="px-4 py-3 text-sm font-medium text-gray-500">Čiarový kód</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-500">Produkt</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-500">Sklad</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-500">Lokácia</th>
@@ -213,7 +228,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
             <tbody>
               {error ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-4 text-sm text-red-600">
+                  <td colSpan={11} className="px-4 py-4 text-sm text-red-600">
                     Chyba pri načítaní stavu skladu
                   </td>
                 </tr>
@@ -233,6 +248,9 @@ export default async function StockPage({ searchParams }: StockPageProps) {
                     >
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {row.products?.sku || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {row.products?.barcode || "-"}
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {row.products?.name || "-"}
@@ -268,7 +286,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
                 })
               ) : (
                 <tr>
-                  <td colSpan={10} className="px-4 py-4 text-sm text-gray-500">
+                  <td colSpan={11} className="px-4 py-4 text-sm text-gray-500">
                     Nenašli sa žiadne zásoby.
                   </td>
                 </tr>

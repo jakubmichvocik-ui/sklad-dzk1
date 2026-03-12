@@ -1,14 +1,22 @@
-import PageHeader from "../../components/page-header";
-import SectionCard from "../../components/section-card";
 import { createClient } from "@/lib/supabase/server";
+import PageHeader from "@/components/page-header";
+import SectionCard from "@/components/section-card";
+import TableScroll from "@/components/table-scroll";
 import { requirePermission } from "@/lib/auth/require-permission";
 
 type UsersPageProps = {
   searchParams: Promise<{
     error?: string;
-    success?: string;
     updated?: string;
   }>;
+};
+
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  role: string | null;
+  is_active: boolean;
+  permissions: Record<string, boolean> | null;
 };
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
@@ -16,19 +24,23 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
 
   const params = await searchParams;
   const errorMessage = params.error || "";
-  const success = params.success === "1";
   const updated = params.updated === "1";
 
   const supabase = await createClient();
 
-  const { data: users, error } = await supabase
+  const { data: usersRaw, error } = await supabase
     .from("profiles")
-    .select("id, full_name, role, is_active, created_at")
+    .select("id, full_name, role, is_active, permissions")
     .order("created_at", { ascending: false });
 
+  const users = (usersRaw ?? []) as ProfileRow[];
+
   return (
-    <div className="space-y-6">
-      <PageHeader title="Používatelia" description="Správa používateľov a rolí" />
+    <div className="space-y-6 pb-24 md:pb-6">
+      <PageHeader
+        title="Používatelia"
+        description="Správa používateľov, rolí a práv"
+      />
 
       {errorMessage ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -36,26 +48,17 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         </div>
       ) : null}
 
-      {success ? (
-        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          Používateľ bol vytvorený.
-        </div>
-      ) : null}
-
       {updated ? (
         <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          Používateľ bol upravený.
+          Zmena bola úspešne uložená.
         </div>
       ) : null}
 
-      <SectionCard title="Nový používateľ">
+      <SectionCard
+        title="Vytvoriť používateľa"
+        description="Nový používateľ a jeho prístupové práva"
+      >
         <form action="/users/new" method="post" className="grid gap-4 md:grid-cols-2">
-          <input
-            name="full_name"
-            placeholder="Meno"
-            className="rounded-xl border border-gray-200 px-3 py-2.5"
-          />
-
           <input
             name="email"
             type="email"
@@ -72,6 +75,12 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             required
           />
 
+          <input
+            name="full_name"
+            placeholder="Meno"
+            className="rounded-xl border border-gray-200 px-3 py-2.5"
+          />
+
           <select
             name="role"
             defaultValue="picker"
@@ -83,7 +92,9 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
           </select>
 
           <div className="rounded-2xl border border-gray-200 p-4 md:col-span-2">
-            <div className="mb-3 text-sm font-medium text-gray-700">Prístup k sekciám</div>
+            <div className="mb-3 text-sm font-medium text-gray-700">
+              Prístup k sekciám
+            </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <label className="flex items-center gap-2">
@@ -127,6 +138,11 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               </label>
 
               <label className="flex items-center gap-2">
+                <input type="checkbox" name="perm_suppliers" />
+                Dodávatelia
+              </label>
+
+              <label className="flex items-center gap-2">
                 <input type="checkbox" name="perm_warehouses" />
                 Sklady
               </label>
@@ -143,43 +159,43 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             </div>
           </div>
 
-          <button className="rounded-xl bg-slate-900 px-4 py-2.5 text-white md:col-span-2">
+          <button className="rounded-xl bg-green-600 px-4 py-2.5 text-white hover:bg-green-500 md:col-span-2">
             Vytvoriť používateľa
           </button>
         </form>
       </SectionCard>
 
-      <div className="overflow-hidden rounded-2xl border bg-white">
-        <table className="w-full border-collapse">
+      <TableScroll>
+        <table className="min-w-[900px] w-full border-collapse">
           <thead>
             <tr className="bg-gray-50 text-left">
-              <th className="px-4 py-3 text-sm">Meno</th>
-              <th className="px-4 py-3 text-sm">Rola</th>
-              <th className="px-4 py-3 text-sm">Aktívny</th>
-              <th className="px-4 py-3 text-sm">Vytvorené</th>
-              <th className="px-4 py-3 text-sm">Akcie</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Meno</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Rola</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Aktívny</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Akcia</th>
             </tr>
           </thead>
           <tbody>
             {error ? (
               <tr>
-                <td colSpan={5} className="px-4 py-4 text-red-600">
+                <td colSpan={4} className="px-4 py-4 text-sm text-red-600">
                   Chyba pri načítaní používateľov
                 </td>
               </tr>
-            ) : users && users.length > 0 ? (
+            ) : users.length > 0 ? (
               users.map((user) => (
-                <tr key={user.id} className="border-t">
-                  <td className="px-4 py-3">{user.full_name || "-"}</td>
-                  <td className="px-4 py-3">{user.role}</td>
-                  <td className="px-4 py-3">{user.is_active ? "Áno" : "Nie"}</td>
-                  <td className="px-4 py-3">
-                    {new Date(user.created_at).toLocaleString("sk-SK")}
+                <tr key={user.id} className="border-t border-gray-100">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    {user.full_name || "-"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm text-gray-600">{user.role || "-"}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {user.is_active ? "Áno" : "Nie"}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
                     <a
                       href={`/users/${user.id}`}
-                      className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white"
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-500"
                     >
                       Upraviť
                     </a>
@@ -188,14 +204,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-4 py-4 text-gray-500">
-                  Zatiaľ nemáš žiadnych používateľov.
+                <td colSpan={4} className="px-4 py-4 text-sm text-gray-500">
+                  Žiadni používatelia.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }
