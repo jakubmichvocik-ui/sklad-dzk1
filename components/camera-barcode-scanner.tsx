@@ -1,6 +1,6 @@
 "use client";
 
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
 import { useEffect, useRef, useState } from "react";
 
 type CameraBarcodeScannerProps = {
@@ -12,6 +12,7 @@ export default function CameraBarcodeScanner({
 }: CameraBarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
@@ -23,12 +24,14 @@ export default function CameraBarcodeScanner({
     try {
       if (!videoRef.current) return;
 
+      stopScanner();
+
       const reader = new BrowserMultiFormatReader();
       readerRef.current = reader;
 
       setRunning(true);
 
-      await reader.decodeFromVideoDevice(
+      const controls = await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current,
         (result, err) => {
@@ -44,6 +47,7 @@ export default function CameraBarcodeScanner({
 
           if (err) {
             const name = (err as { name?: string })?.name;
+
             if (
               name &&
               name !== "NotFoundException" &&
@@ -55,6 +59,8 @@ export default function CameraBarcodeScanner({
           }
         }
       );
+
+      controlsRef.current = controls;
     } catch {
       setRunning(false);
       setError("Kamera sa nepodarila spustiť. Skontroluj povolenie kamery.");
@@ -62,8 +68,12 @@ export default function CameraBarcodeScanner({
   }
 
   function stopScanner() {
-    readerRef.current?.reset();
-    readerRef.current = null;
+    const controls = controlsRef.current;
+
+    if (controls) {
+      controls.stop();
+      controlsRef.current = null;
+    }
 
     const video = videoRef.current;
     if (video?.srcObject) {
@@ -72,6 +82,7 @@ export default function CameraBarcodeScanner({
       video.srcObject = null;
     }
 
+    readerRef.current = null;
     setRunning(false);
   }
 
