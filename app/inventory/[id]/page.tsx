@@ -13,6 +13,27 @@ type Props = {
   }>;
 };
 
+type InventorySessionRow = {
+  id: string;
+  status: string | null;
+  note: string | null;
+  created_at: string;
+  completed_at: string | null;
+  warehouse_id: string | null;
+  location_id: string | null;
+};
+
+type WarehouseRow = {
+  id: string;
+  name: string;
+};
+
+type LocationRow = {
+  id: string;
+  name: string;
+  code: string;
+};
+
 type InventoryItemRow = {
   id: string;
   expected_qty: number | null;
@@ -35,16 +56,6 @@ type InventoryItemRow = {
     | null;
 };
 
-type SessionRow = {
-  id: string;
-  status: string;
-  note: string | null;
-  created_at: string;
-  completed_at: string | null;
-  warehouses: { name: string } | { name: string }[] | null;
-  locations: { name: string; code: string } | { name: string; code: string }[] | null;
-};
-
 export default async function InventoryDetailPage({
   params,
   searchParams,
@@ -60,21 +71,62 @@ export default async function InventoryDetailPage({
 
   const supabase = await createClient();
 
-  const { data: sessionRaw } = await supabase
+  const { data: sessionRaw, error: sessionError } = await supabase
     .from("inventory_sessions")
-    .select(`
-      id,
-      status,
-      note,
-      created_at,
-      completed_at,
-      warehouses ( name ),
-      locations ( name, code )
-    `)
+    .select("id, status, note, created_at, completed_at, warehouse_id, location_id")
     .eq("id", id)
     .maybeSingle();
 
-  const session = sessionRaw as SessionRow | null;
+  const session = sessionRaw as InventorySessionRow | null;
+
+  if (sessionError || !session) {
+    return (
+      <div className="space-y-6 pb-24 md:pb-6">
+        <PageHeader
+          title="Inventúra"
+          description="Inventúra nebola nájdená"
+        />
+        <SectionCard>
+          <div className="text-sm text-red-600">
+            {sessionError?.message || "Záznam inventúry neexistuje."}
+          </div>
+          <div className="mt-4">
+            <Link
+              href="/inventory"
+              className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Späť na inventúry
+            </Link>
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  let warehouseName = "-";
+  let locationLabel = "Celý sklad";
+
+  if (session.warehouse_id) {
+    const { data: warehouseRaw } = await supabase
+      .from("warehouses")
+      .select("id, name")
+      .eq("id", session.warehouse_id)
+      .maybeSingle();
+
+    const warehouse = warehouseRaw as WarehouseRow | null;
+    warehouseName = warehouse?.name || "-";
+  }
+
+  if (session.location_id) {
+    const { data: locationRaw } = await supabase
+      .from("locations")
+      .select("id, name, code")
+      .eq("id", session.location_id)
+      .maybeSingle();
+
+    const location = locationRaw as LocationRow | null;
+    locationLabel = location ? `${location.code} - ${location.name}` : "-";
+  }
 
   const { data: itemsRaw, error } = await supabase
     .from("inventory_items")
@@ -94,14 +146,6 @@ export default async function InventoryDetailPage({
     .eq("inventory_session_id", id)
     .order("created_at", { ascending: true });
 
-  if (!session) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Inventúra" description="Inventúra nebola nájdená" />
-      </div>
-    );
-  }
-
   let items = (itemsRaw ?? []) as InventoryItemRow[];
 
   if (q) {
@@ -114,23 +158,13 @@ export default async function InventoryDetailPage({
     });
   }
 
-  const warehouse = Array.isArray(session.warehouses)
-    ? session.warehouses[0]
-    : session.warehouses;
-
-  const location = Array.isArray(session.locations)
-    ? session.locations[0]
-    : session.locations;
-
   const isClosed = session.status === "closed" || session.status === "completed";
 
   return (
     <div className="space-y-6 pb-24 md:pb-6">
       <PageHeader
         title="Detail inventúry"
-        description={`Sklad: ${warehouse?.name || "-"} | Lokácia: ${
-          location ? `${location.code} - ${location.name}` : "Celý sklad"
-        }`}
+        description={`Sklad: ${warehouseName} | Lokácia: ${locationLabel}`}
       />
 
       <div className="flex flex-wrap justify-end gap-2">
@@ -142,7 +176,7 @@ export default async function InventoryDetailPage({
         </a>
 
         {!isClosed ? (
-          <form action={`/inventory/${id}/close`} method="post">
+          <form action={`/inventory/${id}/complete`} method="post">
             <button className="rounded-xl bg-slate-900 px-4 py-2.5 text-white hover:bg-slate-800">
               Uzatvoriť inventúru
             </button>
@@ -152,7 +186,7 @@ export default async function InventoryDetailPage({
 
       {errorMessage ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Operáciu sa nepodarilo vykonať: {errorMessage}
+          {errorMessage}
         </div>
       ) : null}
 
@@ -164,13 +198,13 @@ export default async function InventoryDetailPage({
 
       <SectionCard
         title="Hľadať položku"
-        description="Zadaj alebo naskenuj názov, SKU alebo čiarový kód"
+        description="Zadaj názov, SKU alebo čiarový kód"
       >
         <form method="get" className="grid gap-4 md:grid-cols-3">
           <input
             name="q"
             defaultValue={query.q || ""}
-            placeholder="Naskenuj alebo zadaj kód"
+            placeholder="Hľadaj alebo naskenuj kód"
             className="rounded-xl border border-gray-200 px-3 py-2.5 outline-none"
           />
           <button className="rounded-xl bg-slate-900 px-4 py-2.5 text-white">
@@ -210,11 +244,11 @@ export default async function InventoryDetailPage({
                   : item.products;
 
                 const expected = Number(item.expected_qty ?? 0);
+                const difference = Number(item.difference_qty ?? 0);
                 const counted =
                   item.counted_qty === null || item.counted_qty === undefined
                     ? ""
                     : String(item.counted_qty);
-                const difference = Number(item.difference_qty ?? 0);
 
                 return (
                   <div
@@ -261,10 +295,11 @@ export default async function InventoryDetailPage({
                       </div>
                     ) : (
                       <form
-                        action={`/inventory/${id}/item/${item.id}/update`}
+                        action={`/inventory/${id}/update-item`}
                         method="post"
                         className="mt-4 space-y-3"
                       >
+                        <input type="hidden" name="item_id" value={item.id} />
                         <input
                           name="counted_qty"
                           type="number"
@@ -304,7 +339,6 @@ export default async function InventoryDetailPage({
                     <th className="px-4 py-3 text-sm font-medium text-gray-500">Spočítané</th>
                     <th className="px-4 py-3 text-sm font-medium text-gray-500">Rozdiel</th>
                     <th className="px-4 py-3 text-sm font-medium text-gray-500">Poznámka</th>
-                    <th className="px-4 py-3 text-sm font-medium text-gray-500">Akcia</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -312,13 +346,6 @@ export default async function InventoryDetailPage({
                     const product = Array.isArray(item.products)
                       ? item.products[0]
                       : item.products;
-
-                    const expected = Number(item.expected_qty ?? 0);
-                    const counted =
-                      item.counted_qty === null || item.counted_qty === undefined
-                        ? ""
-                        : String(item.counted_qty);
-                    const difference = Number(item.difference_qty ?? 0);
 
                     return (
                       <tr key={item.id} className="border-t border-gray-100">
@@ -335,45 +362,16 @@ export default async function InventoryDetailPage({
                           {product?.unit || "-"}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {expected.toFixed(2)}
+                          {Number(item.expected_qty ?? 0).toFixed(2)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {isClosed ? (
-                            Number(item.counted_qty ?? 0).toFixed(2)
-                          ) : (
-                            <form
-                              action={`/inventory/${id}/item/${item.id}/update`}
-                              method="post"
-                              className="flex items-center gap-2"
-                            >
-                              <input
-                                name="counted_qty"
-                                type="number"
-                                step="0.01"
-                                defaultValue={counted}
-                                className="w-28 rounded-lg border border-gray-200 px-2 py-1.5"
-                              />
-                              <input
-                                name="note"
-                                type="text"
-                                defaultValue={item.note || ""}
-                                className="w-48 rounded-lg border border-gray-200 px-2 py-1.5"
-                                placeholder="Poznámka"
-                              />
-                              <button className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
-                                Uložiť
-                              </button>
-                            </form>
-                          )}
+                          {Number(item.counted_qty ?? 0).toFixed(2)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {difference.toFixed(2)}
+                          {Number(item.difference_qty ?? 0).toFixed(2)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {item.note || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {isClosed ? "-" : "Upraviť v riadku"}
                         </td>
                       </tr>
                     );
